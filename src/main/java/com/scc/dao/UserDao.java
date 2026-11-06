@@ -16,14 +16,13 @@ public class UserDao {
                 rs.getString("Password"), rs.getString("Roles"), rs.getString("Status"));
     }
 
-    // Self-registration: account waits for admin approval
-    public boolean registerUser(String Username, String Password, String Roles) {
+    public boolean registerUser(String username, String password, String roles) {
         String sql = "INSERT INTO Users (Username, Password, Roles, Status) VALUES (?, ?, ?, 'PENDING')";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, Username);
-            pstmt.setString(2, Password);
-            pstmt.setString(3, Roles.toUpperCase());
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            pstmt.setString(3, roles.toUpperCase());
             pstmt.execute();
             System.out.println("-> Successful Registration, Waiting For Approval!");
             return true;
@@ -33,14 +32,13 @@ public class UserDao {
         }
     }
 
-
-    public boolean addUser(String Username, String Password, String Roles) {
+    public boolean addUser(String username, String password, String roles) {
         String sql = "INSERT INTO Users (Username, Password, Roles, Status) VALUES (?, ?, ?, 'APPROVED')";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, Username);
-            pstmt.setString(2, Password);
-            pstmt.setString(3, Roles.toUpperCase());
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            pstmt.setString(3, roles.toUpperCase());
             pstmt.execute();
             return true;
         } catch (SQLException e) {
@@ -49,14 +47,13 @@ public class UserDao {
         }
     }
 
-
-    public User findForLogin(String Username, String Password, String Roles) {
+    public User findForLogin(String username, String password, String roles) {
         String sql = "SELECT * FROM Users WHERE Username = ? AND Password = ? AND Roles = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, Username);
-            pstmt.setString(2, Password);
-            pstmt.setString(3, Roles.toUpperCase());
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            pstmt.setString(3, roles.toUpperCase());
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) return map(rs);
             }
@@ -66,11 +63,9 @@ public class UserDao {
         return null;
     }
 
-
     public List<User> getAllUsers() {
         return query("SELECT * FROM Users ORDER BY Id");
     }
-
 
     public List<User> getPendingUsers() {
         return query("SELECT * FROM Users WHERE Status = 'PENDING' ORDER BY Id");
@@ -88,7 +83,6 @@ public class UserDao {
         return list;
     }
 
-
     public boolean approveUser(int userId) {
         String sql = "UPDATE Users SET Status = 'APPROVED' WHERE Id = ? AND Status = 'PENDING'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -101,13 +95,13 @@ public class UserDao {
         }
     }
 
-    public boolean updateRoleAndStatus(int id, String role, String status) {
-        String sql = "UPDATE Users SET Roles = ?, Status = ? WHERE Id = ?";
+    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+        String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, role.toUpperCase());
-            pstmt.setString(2, status.toUpperCase());
-            pstmt.setInt(3, id);
+            pstmt.setString(1, newRole.toUpperCase());
+            pstmt.setString(2, newStatus.toUpperCase());
+            pstmt.setInt(3, userId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Failed: " + e.getMessage());

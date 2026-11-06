@@ -8,6 +8,9 @@ import java.util.Scanner;
 
 public class AdminMenu {
 
+    private static final List<String> VALID_ROLES = List.of("USER", "ADMIN");
+    private static final List<String> VALID_STATUSES = List.of("APPROVED", "PENDING");
+
     private final Scanner scanner;
     private final UserDao userDao = new UserDao();
 
@@ -48,13 +51,10 @@ public class AdminMenu {
         }
     }
 
-
-
     private static String cut(String text, int max) {
         if (text == null) return "";
         return text.length() <= max ? text : text.substring(0, max - 1) + "~";
     }
-
 
     private void printUserTable(String title, List<User> users) {
         String border = "+-------+-----------------+--------------+------------+";
@@ -74,8 +74,6 @@ public class AdminMenu {
         System.out.println(border);
         System.out.println("Total: " + users.size());
     }
-
-    // ---------- Menu actions ----------
 
     private void viewAllUsers() {
         List<User> users = userDao.getAllUsers();
@@ -104,7 +102,7 @@ public class AdminMenu {
         printUserTable("PENDING REGISTRATIONS", pending);
 
         while (true) {
-            int id = promptId("Enter User ID to approve (0 to cancel): ");
+            int id = readIntInput("Enter User ID to approve (0 to cancel): ");
             if (id == 0) {
                 System.out.println("Approval cancelled.");
                 return;
@@ -146,40 +144,41 @@ public class AdminMenu {
     private void updateUser(User admin) {
         List<User> all = userDao.getAllUsers();
         printUserTable("ALL SYSTEM USERS", all);
-        int id = promptId("Enter User ID to update (0 to cancel): ");
-        if (id == 0) {
-            System.out.println("Cancelled.");
+
+        int targetUserId = readIntInput("Enter User ID to update (0 to cancel): ");
+        if (targetUserId == 0) {
+            System.out.println("Update cancelled.");
             return;
         }
-        if (id == admin.Id()) {
-            System.out.println("You cannot change your own account.");
+        if (targetUserId == admin.Id()) {
+            System.out.println("WARNING: Modifying the currently active admin account is restricted.");
             return;
         }
-        if (all.stream().noneMatch(u -> u.Id() == id)) {
+        if (all.stream().noneMatch(u -> u.Id() == targetUserId)) {
             System.out.println("No user with that ID.");
             return;
         }
-        String role = askRole();
-        if (role == null) return;
-        System.out.print("Status [1] APPROVED [2] INACTIVE [3] PENDING: ");
-        String status = switch (scanner.nextLine().trim()) {
-            case "1" -> "APPROVED";
-            case "2" -> "INACTIVE";
-            case "3" -> "PENDING";
-            default -> null;
-        };
-        if (status == null) {
-            System.out.println("Invalid status.");
+
+        String newRole = readValidRole();
+        if (newRole == null) {
+            System.out.println("Update cancelled.");
             return;
         }
-        System.out.println(userDao.updateRoleAndStatus(id, role, status)
+
+        String newStatus = readValidStatus();
+        if (newStatus == null) {
+            System.out.println("Update cancelled.");
+            return;
+        }
+
+        System.out.println(userDao.updateUserRoleAndStatus(targetUserId, newRole, newStatus)
                 ? "User updated." : "Update failed.");
     }
 
     private void deleteUser(User admin) {
         List<User> all = userDao.getAllUsers();
         printUserTable("ALL SYSTEM USERS", all);
-        int id = promptId("Enter User ID to delete (0 to cancel): ");
+        int id = readIntInput("Enter User ID to delete (0 to cancel): ");
         if (id == 0) {
             System.out.println("Cancelled.");
             return;
@@ -200,20 +199,35 @@ public class AdminMenu {
         System.out.println(userDao.deleteUser(id) ? "User deleted." : "Delete failed.");
     }
 
-
-
-    /** Keeps asking until a whole number is entered. 0 means cancel. */
-    private int promptId(String message) {
+    private int readIntInput(String prompt) {
         while (true) {
-            System.out.print(message);
+            System.out.print(prompt);
             String input = scanner.nextLine().trim();
             try {
-                int id = Integer.parseInt(input);
-                if (id >= 0) return id;
+                int value = Integer.parseInt(input);
+                if (value >= 0) return value;
                 System.out.println("Please enter a positive number, or 0 to cancel.");
             } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid number, or 0 to cancel.");
+                System.out.println("Invalid input. Please enter a number, or 0 to cancel.");
             }
+        }
+    }
+
+    private String readValidRole() {
+        return readValidChoice("Enter role " + VALID_ROLES + " (0 to cancel): ", VALID_ROLES, "role");
+    }
+
+    private String readValidStatus() {
+        return readValidChoice("Enter status " + VALID_STATUSES + " (0 to cancel): ", VALID_STATUSES, "status");
+    }
+
+    private String readValidChoice(String prompt, List<String> allowed, String label) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim().toUpperCase();
+            if (input.equals("0")) return null;
+            if (allowed.contains(input)) return input;
+            System.out.println("Invalid " + label + ". Choose one of: " + allowed);
         }
     }
 
