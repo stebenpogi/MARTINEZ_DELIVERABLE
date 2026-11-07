@@ -1,5 +1,6 @@
 package com.scc.ui;
 
+import com.scc.dao.ActivityLogDao;
 import com.scc.dao.UserDao;
 import com.scc.model.User;
 
@@ -9,12 +10,12 @@ public class Authentication {
 
     private final Scanner scanner;
     private final UserDao userDao = new UserDao();
+    private final ActivityLogDao logDao = new ActivityLogDao();
 
     public Authentication(Scanner scanner) {
         this.scanner = scanner;
     }
 
-    /** Main loop: LogIn / Register / Exit. */
     public void start() {
         boolean running = true;
         while (running) {
@@ -75,11 +76,18 @@ public class Authentication {
             return;
         }
 
+        logDao.logAction(user.Id(), "USER_LOGIN",
+                "User " + user.Username() + " (ID: " + user.Id() + ") logged in.");
         System.out.println("Welcome, " + user.Username() + "!");
         routeByRole(user);
+        logout(user);
     }
 
-    /** Sends the logged-in user to the menu for their role. */
+    private void logout(User user) {
+        logDao.logAction(user.Id(), "USER_LOGOUT",
+                "User " + user.Username() + " (ID: " + user.Id() + ") logged out.");
+    }
+
     private void routeByRole(User user) {
         switch (user.Roles().toUpperCase()) {
             case "ADMIN" -> new AdminMenu(scanner).display(user);

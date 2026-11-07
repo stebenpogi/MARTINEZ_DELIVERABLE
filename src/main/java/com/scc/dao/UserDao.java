@@ -11,6 +11,8 @@ import java.util.List;
 
 public class UserDao {
 
+    private final ActivityLogDao logDao = new ActivityLogDao();
+
     private User map(ResultSet rs) throws SQLException {
         return new User(rs.getInt("Id"), rs.getString("Username"),
                 rs.getString("Password"), rs.getString("Roles"), rs.getString("Status"));
@@ -45,6 +47,15 @@ public class UserDao {
             System.err.println("Failed: " + e.getMessage());
             return false;
         }
+    }
+
+    public boolean addUser(int adminId, String username, String password, String roles) {
+        boolean added = addUser(username, password, roles);
+        if (added) {
+            logDao.logAction(adminId, "USER_ADDED", "Admin " + adminId + " added user '"
+                    + username + "' as " + roles.toUpperCase());
+        }
+        return added;
     }
 
     public User findForLogin(String username, String password, String roles) {
@@ -95,6 +106,15 @@ public class UserDao {
         }
     }
 
+    public boolean approveUser(int adminId, int userId) {
+        boolean approved = approveUser(userId);
+        if (approved) {
+            logDao.logAction(adminId, "USER_APPROVED",
+                    "Admin " + adminId + " approved account for User ID " + userId);
+        }
+        return approved;
+    }
+
     public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
         String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -109,6 +129,15 @@ public class UserDao {
         }
     }
 
+    public boolean updateUserRoleAndStatus(int adminId, int userId, String newRole, String newStatus) {
+        boolean updated = updateUserRoleAndStatus(userId, newRole, newStatus);
+        if (updated) {
+            logDao.logAction(adminId, "USER_UPDATED", "Admin " + adminId + " changed role of User "
+                    + userId + " to " + newRole.toUpperCase() + " and status to " + newStatus.toUpperCase());
+        }
+        return updated;
+    }
+
     public boolean deleteUser(int id) {
         String sql = "DELETE FROM Users WHERE Id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -119,5 +148,14 @@ public class UserDao {
             System.err.println("Failed: " + e.getMessage());
             return false;
         }
+    }
+
+    public boolean deleteUser(int adminId, int id) {
+        boolean deleted = deleteUser(id);
+        if (deleted) {
+            logDao.logAction(adminId, "USER_DELETED",
+                    "Admin " + adminId + " deleted account of User ID " + id);
+        }
+        return deleted;
     }
 }
