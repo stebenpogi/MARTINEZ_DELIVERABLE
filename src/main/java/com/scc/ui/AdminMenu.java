@@ -2,9 +2,11 @@ package com.scc.ui;
 
 import com.scc.dao.ActivityLogDao;
 import com.scc.dao.EbikeDao;
+import com.scc.dao.LoanDao;
 import com.scc.dao.UserDao;
 import com.scc.model.ActivityLog;
 import com.scc.model.Ebike;
+import com.scc.model.LoanView;
 import com.scc.model.User;
 
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ public class AdminMenu {
     private final UserDao userDao = new UserDao();
     private final EbikeDao ebikeDao = new EbikeDao();
     private final ActivityLogDao logDao = new ActivityLogDao();
+    private final LoanDao loanDao = new LoanDao();
 
     public AdminMenu(Scanner scanner) {
         this.scanner = scanner;
@@ -44,8 +47,9 @@ public class AdminMenu {
             System.out.println("7. Add E-bike");
             System.out.println("8. Update E-bike Status");
             System.out.println("9. View System Audit Logs");
-            System.out.println("10. Logout");
-            System.out.print("Choose an option (1-10): ");
+            System.out.println("10. Review Loan Applications");
+            System.out.println("11. Logout");
+            System.out.print("Choose an option (1-11): ");
 
             String choice = scanner.nextLine().trim();
 
@@ -59,11 +63,12 @@ public class AdminMenu {
                 case "7" -> addEbike(admin);
                 case "8" -> updateEbikeStatus(admin);
                 case "9" -> auditLogMenu(admin);
-                case "10" -> {
+                case "10" -> reviewLoans(admin);
+                case "11" -> {
                     System.out.println("Logged out.");
                     loggedIn = false;
                 }
-                default -> System.out.println("Invalid option. Choose 1-10.");
+                default -> System.out.println("Invalid option. Choose 1-11.");
             }
         }
     }
@@ -277,6 +282,49 @@ public class AdminMenu {
         }
         System.out.println(ebikeDao.updateEbikeStatus(admin.Id(), id, status)
                 ? "E-bike status updated." : "Update failed.");
+    }
+
+    private void reviewLoans(User admin) {
+        List<LoanView> pending = loanDao.getPendingLoans();
+        if (pending.isEmpty()) {
+            System.out.println("No pending loan applications.");
+            return;
+        }
+        String border = "+------+-----------------+----------------------+------------+------+------------+";
+        String row = "| %-4s | %-15s | %-20s | %10s | %-4s | %10s |%n";
+
+        System.out.println("\nPENDING LOAN APPLICATIONS");
+        System.out.println(border);
+        System.out.printf(row, "LOAN", "CUSTOMER", "E-BIKE", "DOWN", "TERM", "MONTHLY");
+        System.out.println(border);
+        for (LoanView l : pending) {
+            System.out.printf(row, l.loanId(), cut(l.customerName(), 15), cut(l.ebike(), 20),
+                    String.format("%,.2f", l.downPayment()), l.termMonths(),
+                    String.format("%,.2f", l.monthlyAmount()));
+        }
+        System.out.println(border);
+
+        int id = readIntInput("Enter Loan ID to review (0 to cancel): ");
+        if (id == 0) {
+            System.out.println("Cancelled.");
+            return;
+        }
+        if (pending.stream().noneMatch(l -> l.loanId() == id)) {
+            System.out.println("That loan is not in the pending list.");
+            return;
+        }
+        System.out.print("[1] Approve  [2] Reject  [0] Cancel: ");
+        switch (scanner.nextLine().trim()) {
+            case "1" -> {
+                String error = loanDao.approveLoan(admin.Id(), id);
+                System.out.println(error == null
+                        ? "Loan " + id + " approved. It is now ACTIVE."
+                        : "Cannot approve: " + error);
+            }
+            case "2" -> System.out.println(loanDao.rejectLoan(admin.Id(), id)
+                    ? "Loan " + id + " rejected." : "Reject failed.");
+            default -> System.out.println("Cancelled.");
+        }
     }
 
     private void auditLogMenu(User admin) {

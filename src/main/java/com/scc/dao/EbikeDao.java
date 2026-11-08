@@ -51,6 +51,22 @@ public class EbikeDao {
         return list;
     }
 
+    public List<Ebike> getAvailableEbikes() {
+        String sql = "SELECT * FROM Ebike WHERE UPPER(Status) = 'AVAILABLE' AND Stock > 0 ORDER BY EbikeID";
+        List<Ebike> list = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                list.add(new Ebike(rs.getInt("EbikeID"), rs.getString("Brand"), rs.getString("Model"),
+                        rs.getDouble("Price"), rs.getInt("Stock"), rs.getString("Status")));
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed: " + e.getMessage());
+        }
+        return list;
+    }
+
     public boolean updateEbikeStatus(int adminId, int ebikeId, String newStatus) {
         String select = "SELECT Status FROM Ebike WHERE EbikeID = ?";
         String update = "UPDATE Ebike SET Status = ? WHERE EbikeID = ?";
