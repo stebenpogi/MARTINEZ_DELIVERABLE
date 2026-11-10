@@ -3,10 +3,10 @@ package com.scc.ui;
 import com.scc.dao.ActivityLogDao;
 import com.scc.dao.EbikeDao;
 import com.scc.dao.LoanDao;
+import com.scc.dao.LoanDao.LoanView;
 import com.scc.dao.UserDao;
 import com.scc.model.ActivityLog;
 import com.scc.model.Ebike;
-import com.scc.model.LoanView;
 import com.scc.model.User;
 
 import java.util.ArrayList;

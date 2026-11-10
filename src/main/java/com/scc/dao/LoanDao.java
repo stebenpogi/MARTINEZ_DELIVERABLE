@@ -1,8 +1,5 @@
 package com.scc.dao;
 
-import com.scc.model.LoanView;
-import com.scc.model.Payment;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,6 +10,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LoanDao {
+
+    public record LoanView(int loanId, String customerName, String ebike, double price,
+                           double downPayment, int termMonths, double monthlyAmount,
+                           double paid, String status) {
+
+        public double balance() {
+            return Math.max(0, Math.round((monthlyAmount * termMonths - paid) * 100.0) / 100.0);
+        }
+    }
+
+    public record Payment(int paymentId, int loanId, double amountPaid, String paymentDate, String receiptNumber) {
+    }
 
     public static final double MIN_DOWN_RATE = 0.20;
     public static final double MONTHLY_INTEREST_RATE = 0.015;
@@ -51,6 +60,37 @@ public class LoanDao {
         return new LoanView(rs.getInt("LoanID"), rs.getString("Fullname"), rs.getString("Ebike"),
                 rs.getDouble("Price"), rs.getDouble("DownPayment"), rs.getInt("TermMonths"),
                 rs.getDouble("MonthlyAmount"), rs.getDouble("Paid"), rs.getString("Loan_Status"));
+    }
+
+    public int findCustomerId(int userId) {
+        String sql = "SELECT CustomerID FROM Customer WHERE UserID = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getInt("CustomerID");
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    public int createCustomer(int userId, String fullname, String contactNumber, String address, String email) {
+        String sql = "INSERT INTO Customer (UserID, Fullname, Contact_Number, Address, Email) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, fullname);
+            pstmt.setString(3, contactNumber);
+            pstmt.setString(4, address);
+            pstmt.setString(5, email);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Failed: " + e.getMessage());
+            return 0;
+        }
+        return findCustomerId(userId);
     }
 
     public int applyForLoan(int userId, int customerId, int ebikeId, double downPayment,

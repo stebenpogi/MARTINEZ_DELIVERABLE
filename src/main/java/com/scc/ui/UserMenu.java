@@ -1,11 +1,10 @@
 package com.scc.ui;
 
-import com.scc.dao.CustomerDao;
 import com.scc.dao.EbikeDao;
 import com.scc.dao.LoanDao;
+import com.scc.dao.LoanDao.LoanView;
+import com.scc.dao.LoanDao.Payment;
 import com.scc.model.Ebike;
-import com.scc.model.LoanView;
-import com.scc.model.Payment;
 import com.scc.model.User;
 
 import java.util.List;
@@ -16,7 +15,6 @@ public class UserMenu {
     private final Scanner scanner;
     private final EbikeDao ebikeDao = new EbikeDao();
     private final LoanDao loanDao = new LoanDao();
-    private final CustomerDao customerDao = new CustomerDao();
 
     public UserMenu(Scanner scanner) {
         this.scanner = scanner;
@@ -93,7 +91,7 @@ public class UserMenu {
             return;
         }
 
-        int customerId = customerDao.findCustomerId(user.Id());
+        int customerId = loanDao.findCustomerId(user.Id());
         if (customerId == 0) {
             customerId = setUpCustomerProfile(user);
             if (customerId == 0) return;
@@ -184,7 +182,7 @@ public class UserMenu {
         System.out.print("Email: ");
         String email = scanner.nextLine().trim();
 
-        int customerId = customerDao.createCustomer(user.Id(), fullname, contact, address, email);
+        int customerId = loanDao.createCustomer(user.Id(), fullname, contact, address, email);
         if (customerId == 0) {
             System.out.println("Could not save your profile. Please try again.");
         } else {
